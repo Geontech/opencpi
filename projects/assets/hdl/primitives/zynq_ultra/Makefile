@@ -22,24 +22,22 @@ HdlLibraries=fixed_float ocpi platform axi
 
 # See the READMEfor more information regarding the source files listed below
 IPGEN_DIR=vivado_zynq_ultra
-SourceFiles=zynq_ultra_pkg.vhd $(IPGEN_DIR)/zynq_ultra_ps_e_v3_2_1.v $(IPGEN_DIR)/zynq_ultra_ps_e_0.vhd $(IPGEN_DIR)/zynq_ultra_ps_e_0_pkg.vhd zynq_ultra_ps_e.vhd
+SourceFiles=zynq_ultra_pkg.vhd $(IPGEN_DIR)/zynq_ultra_ps_e_ps8_wrapper.v $(IPGEN_DIR)/zynq_ultra_ps_e_0.vhd $(IPGEN_DIR)/zynq_ultra_ps_e_0_pkg.vhd zynq_ultra_ps_e.vhd
 
 include $(OCPI_CDK_DIR)/include/hdl/hdl-library.mk
 
 # Here, we configure and generate the the Vivado IP for the ZynqMP UltraScale+ PS, extract the Verilog interface to it
-# (zynq_ultra_ps_e_v3_2_1.v), configure it as it is needed for OpenCPI (choose the AXI ports, disable unneeded features),
+# (zynq_ultra_ps_e_ps8_wrapper.v), configure it as it is needed for OpenCPI (choose the AXI ports, disable unneeded features),
 # extract the VHDL wrapper that reflects this particular configuration of the PS (zynq_ultra_ps_e_0.vhd), and also extract
 # the VHDL component declaration template for the resulting entity. This template is then used to construct
 # zynq_ultra_ps_e_0_pkg.vhd.
-$(IPGEN_DIR)/zynq_ultra_ps_e_v3_2_1.v $(IPGEN_DIR)/zynq_ultra_ps_e_0.vhd $(IPGEN_DIR)/zynq_ultra_ps_e_0_pkg.vhd:
+$(IPGEN_DIR)/zynq_ultra_ps_e_ps8_wrapper.v $(IPGEN_DIR)/zynq_ultra_ps_e_0.vhd $(IPGEN_DIR)/zynq_ultra_ps_e_0_pkg.vhd:
 	$(AT)rm -rf $(IPGEN_DIR)/tmp; \
 	     mkdir $(IPGEN_DIR)/tmp; \
 	     cd $(IPGEN_DIR)/tmp; \
 	     $(call OcpiXilinxVivadoInit); \
 	     vivado -mode batch -source ../zynq_ultra_ps_e_gen.tcl > ../zynq_ultra_ps_e_gen.log; \
 	     cd ..; \
-	     cp tmp/managed_ip_project/managed_ip_project.srcs/sources_1/ip/zynq_ultra_ps_e_0/hdl/zynq_ultra_ps_e_v3_2_1.v \
-                tmp/managed_ip_project/managed_ip_project.srcs/sources_1/ip/zynq_ultra_ps_e_0/synth/zynq_ultra_ps_e_0.vhd .; \
 	     echo "library IEEE; use IEEE.std_logic_1164.all; use ieee.numeric_std.all;" >> zynq_ultra_ps_e_0_pkg.vhd; \
 	     echo "package zynq_ultra_ps_e_0_pkg is" >> zynq_ultra_ps_e_0_pkg.vhd; \
 	     awk '/-- COMP_TAG_END ------ End COMPONENT Declaration ------------/{found=0} {if(found) print} /------------- Begin Cut here for COMPONENT Declaration ------ COMP_TAG/{found=1}' tmp/managed_ip_project/managed_ip_project.srcs/sources_1/ip/zynq_ultra_ps_e_0/zynq_ultra_ps_e_0.vho >> zynq_ultra_ps_e_0_pkg.vhd; \
@@ -54,4 +52,4 @@ clean::
 	     rm -f $(IPGEN_DIR)/zynq_ultra_ps_e_gen.log;
 
 cleanall:: clean
-	$(AT)rm $(IPGEN_DIR)/zynq_ultra_ps_e_v3_2_1.v $(IPGEN_DIR)/zynq_ultra_ps_e_0.vhd; $(IPGEN_DIR)/zynq_ultra_ps_e_0_pkg.vhd
+	$(AT)rm -f $(IPGEN_DIR)/zynq_ultra_ps_e_ps8_wrapper.v $(IPGEN_DIR)/zynq_ultra_ps_e_0.vhd $(IPGEN_DIR)/zynq_ultra_ps_e_0_pkg.vhd
