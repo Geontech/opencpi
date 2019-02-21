@@ -17,7 +17,7 @@
 # 2. Entities or modules to be used from outside the library must have the file name
 #    be the same as the entity/module name, and one entity/module per file.
 
-OnlyTargets=zynq_ultra xsim isim modelsim
+OnlyTargets=zynq_ultra xsim
 HdlLibraries=fixed_float ocpi platform axi
 
 # See the READMEfor more information regarding the source files listed below
