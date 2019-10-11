@@ -45,8 +45,10 @@ entity sdp2axi_rd is
           sdp_in       : in  s2m_t;
           sdp_out      : out m2s_t;
           sdp_out_data : out dword_array_t(0 to sdp_width-1);
-          axi_in       : in  s_axi_hp_out_r_t;  -- read data channel in to here
-          axi_out      : out s_axi_hp_in_r_t;   -- read data channel out from here
+          --axi_in       : in  axi64_r_s2m_t;  -- read data channel in to here
+          --axi_out      : out axi64_r_m2s_t;  -- read data channel out from here
+          axi_in       : in  axi32_r_s2m_t;  -- read data channel in to here
+          axi_out      : out axi32_r_m2s_t;  -- read data channel out from here
           debug        : out ulonglong_t);
 end entity sdp2axi_rd;
 architecture rtl of sdp2axi_rd is
@@ -65,10 +67,12 @@ begin
   sdp_out.id               <= (others => '0');
   sdp_out.sdp.header.count <= (others => '0');
   sdp_out.sdp.header.op    <= response_e;
-  sdp_out.sdp.header.xid   <= unsigned(axi_in.ID(2 downto 0));
+--   sdp_out.sdp.header.xid   <= unsigned(axi_in.ID(2 downto 0));
+  sdp_out.sdp.header.xid   <= unsigned(axi_in.ID.xid);
   sdp_out.sdp.header.lead  <= (others => '0');
   sdp_out.sdp.header.trail <= (others => '0');
-  sdp_out.sdp.header.node  <= resize(unsigned(axi_in.ID(5 downto 3)), node_width);
+--   sdp_out.sdp.header.node  <= resize(unsigned(axi_in.ID(5 downto 3)), node_width);
+  sdp_out.sdp.header.node  <= resize(unsigned(axi_in.ID.node), node_width);
   -- This is interesting.  Read responses are all assumed aligned, so the
   -- addressing says the data is aligned in the SDP xfer.  When we support
   -- SDP wider than AXI, and alignment less than SDP width, then we will need to track this

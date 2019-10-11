@@ -59,7 +59,7 @@ HdlTargets_xilinx:=isim virtex5 virtex6 spartan3adsp spartan6 zynq_ise zynq xsim
 HdlTargets_virtex5:=xc5vtx240t xc5vlx50t xc5vsx95t xc5vlx330t xc5vlx110t
 HdlTargets_virtex6:=xc6vlx240t
 
-HdlTargets_spartan6:=xc6slx45
+HdlTargets_spartan6:=xc6slx45 xc6slx45t
 HdlTargets_spartan3adsp:=xc3sd3400a
 
 # Zynq targets - supported by both ISE and Vivado

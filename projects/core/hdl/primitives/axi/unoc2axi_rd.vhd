@@ -35,8 +35,8 @@ entity unoc2axi_rd is
     unoc_take        : in  bool_t;            -- unoc xfer is being taken now
     unoc_in          : in  unoc_master_in_t;
     unoc_out         : out unoc_master_out_t;
-    axi_in           : in  s_axi_hp_out_r_t;  -- read data channel in to here
-    axi_out          : out s_axi_hp_in_r_t;   -- read data channel out from here
+    axi_in           : in  s_axi_out_r_t;     -- read data channel in to here
+    axi_out          : out s_axi_in_r_t;      -- read data channel out from here
     debug            : out ulonglong_t
     );
 end entity unoc2axi_rd;

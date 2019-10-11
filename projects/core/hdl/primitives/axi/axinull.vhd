@@ -22,17 +22,22 @@ library IEEE; use IEEE.std_logic_1164.all; use ieee.numeric_std.all;
 library platform; use platform.platform_pkg.all;
 library ocpi; use ocpi.types.all, ocpi.util.all;
 library work; use work.axi_pkg.all;
+
 entity axinull is
   port(
-    clk       : in  std_logic;
-    reset     : in  bool_t;
-    axi_in    : in  s_axi_hp_out_t;
-    axi_out   : out s_axi_hp_in_t
+    clk     : in  std_logic;
+    reset   : in  bool_t;
+    axi_glb_out : out axi_global_out_t;
+    --axi_in  : in  axi64_s2m_t;
+    --axi_out : out axi64_m2s_t
+    axi_in  : in  axi32_s2m_t;
+    axi_out : out axi32_m2s_t
     );
 end entity axinull;
+
 architecture rtl of axinull is
 begin
-  axi_out.ACLK    <= clk;
+  axi_glb_out.AXI_ACLK_OUT    <= clk;
   axi_out.AW.VALID <= '0';
   axi_out.W.VALID  <= '0';
   axi_out.B.READY  <= '0';              -- we are always ready for responses

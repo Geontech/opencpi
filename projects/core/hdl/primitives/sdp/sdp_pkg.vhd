@@ -45,7 +45,7 @@ type op_t is (read_e,
               response_e,
               reserved_e);
 constant op_width : natural := width_for_max(op_t'pos(op_t'high));
-subtype id_t is unsigned(node_width-1 downto 0);
+subtype node_t is unsigned(node_width-1 downto 0);
 subtype xid_t is unsigned(xid_width-1 downto 0);
 subtype count_t is unsigned(count_width-1 downto 0);
 subtype addr_t is unsigned(addr_width-1 downto 0);
@@ -60,7 +60,7 @@ type header_t is record
   xid     : xid_t;
   lead    : unsigned(end_bytes_width-1 downto 0); -- similar to AXI address LSB
   trail   : unsigned(end_bytes_width-1 downto 0);
-  node    : id_t; -- part of address for outbound requests
+  node    : node_t; -- part of address for outbound requests
   addr    : addr_t;
   extaddr : extaddr_t; 
 end record header_t;
@@ -81,7 +81,7 @@ end record sdp_t;
 type m2s_t is record
   clk   : std_logic;
   reset : bool_t;
-  id    : id_t;
+  id    : node_t;
   sdp   : sdp_t;
 end record m2s_t;
 type m2s_array_t is array(natural range <>) of m2s_t;

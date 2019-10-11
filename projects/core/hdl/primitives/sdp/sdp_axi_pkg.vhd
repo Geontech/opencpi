@@ -34,8 +34,11 @@ component sdp2axi is
     sdp_in_data  : in  dword_array_t(0 to sdp_width-1);
     sdp_out      : out m2s_t;
     sdp_out_data : out dword_array_t(0 to sdp_width-1);
-    axi_in       : in  s_axi_hp_out_t;
-    axi_out      : out s_axi_hp_in_t;
+    axi_glb_out  : out axi_global_out_t;
+    --axi_in       : in  axi64_s2m_t;
+    --axi_out      : out axi64_m2s_t;
+    axi_in       : in  axi32_s2m_t;
+    axi_out      : out axi32_m2s_t;
     axi_error    : out bool_t;
     dbg_state    : out ulonglong_t;
     dbg_state1   : out ulonglong_t;

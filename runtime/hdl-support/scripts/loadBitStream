@@ -63,14 +63,7 @@ if test ! -r $bitfile; then
   exit 1
 fi
 source $OCPI_CDK_DIR/scripts/util.sh
-findInProjectPath jtagSupport_$platform lib/platforms/$platform jtagSupport || {
-  echo Trying to load onto a \"$platform\", but there is no support for loading it \(no executable lib/platforms/$platform/jtagSupport_$platform found in any directory specified in the project registry or by the OCPI_PROJECT_PATH or OCPI_CDK_DIR env variables\)
-  exit 1
-}
-if test "$esn" = ""; then
-  # This is only allowed if there is a single jtag cable found...
-  esn=any
-fi
+
 # Here we have not checked the part or the position yet.
 # Do more generic work that does not depend on the platform-specifics
 echo Checking existing loaded bitstream on OpenCPI HDL device \"$device\"...
@@ -97,100 +90,11 @@ else
 #   echo PCI configuration for \"$device\" captured in \"$tbar\".
    golden=$tbar
 fi
-################################################################################
-# Now we do the platform-specific setup to find cables and serial numbers
-# Get cable info - a list of <cable>=<serial-number>
-################################################################################
-echo Scanning for JTAG cables...
-jtagpermissionscheck=`$jtagSupport 2>&1 | grep -i "unable to lock chain" | grep -i "insufficient port permissions"`
-if test "$jtagpermissionscheck" != ""; then
-  echo "User does not have permission for scanning JTAG cables. Contact your system administrator for permissions pertaining to <altera install location>/quartus/bin/jtagconfig"
-  exit 1
-fi
-cables=`$jtagSupport cables $temp 2>$temp.cables`
-if test $? != 0; then
-  echo JTAG cable setup for platform \"$platform\" failed.
-  echo Dump of $temp.cables:
-  echo "********************************************************************************"
-  cat $temp.cables
-  echo "********************************************************************************"
-  if [ -f $temp.log ]; then
-    echo Dump of $temp.log:
-    echo "********************************************************************************"
-    cat $temp.log
-    echo "********************************************************************************"
-  fi
-  exit 1
-fi
-if test "$cables" = ""; then
-  echo No JTAG cables found for \"$platform\" platforms.  See \"$temp.cables\".
-  exit 1
-fi
-rm -f $temp.cables
-found=
-foundser=
-first=
-firstser=
-#echo Cables are \"$cables\".
-OFS="$IFS"
-IFS="~"
-for c in $cables; do
-  #echo Cable is =$c=
-  IFS="$OFS"
-  read port serial <<EOF
-`echo $c | tee yy |sed 's/ /\\\ /g' | tr '=' ' '|tee xx`
-EOF
-  #echo Found USB cable port: \"$port\" with serial number: \"$serial\".   Esn is \"$esn\".
-  if test "$esn" = any; then
-    if test "$first" != ""; then
-       echo No serial number specified for device \"$device\", but multiple JTAG cables found.
-       exit 1
-    fi
-    first=$port
-    firstser=$serial
-  elif test "$serial" = "$esn"; then
-    if test "$found" != ""; then
-       echo Multiple cables found for device \"$device\" with JTAB cable serial number \"$esn\".
-       exit 1
-    fi
-    found=$port
-    foundser=$serial
-  fi
-done
-if test "$esn" != any; then
-  if test "$found" = ""; then
-    echo No JTAG/USB cable found for device \"$device\" with serial number \"$esn\".
-    exit 1
-  fi
-  cable="$found"
-  serial=$foundser
-  echo Found cable \"$cable\" for device \"$device\" with configured cable serial number \"$esn\".
-elif test "$first" = ""; then
-  echo No JTAG/USB cable found to use for device \"$device\" \(no serial number specified\).
-  exit 1
-else
-  cable="$first"
-  serial=$firstser
-  echo Found cable \"$cable\" to use for device \"$device\" \(no serial number specified\).
-fi
 
 ################################################################################
 # Now we do the platform-specific part search to check that the part we want
 # to load is at the proper place in the jtag chain
 ################################################################################
-jtagpart=`echo $part | sed 's/\(^[^-]*\).*$/\1/'`
-pos=`$jtagSupport part $temp "$cable" "$jtagpart"`
-if test $? != 0; then
-  echo Error: Could not find jtag position for part $part on JTAG cable \"$cable\".
-  exit 1
-fi
-echo The JTAG position of part \"$part\" on JTAG cable \"$cable\" is $pos.
-if test "$position" == any; then
-  position=$pos
-elif test "$position" != "$pos"; then
-  echo The position of the part found \($pos\) does not match the configured value: $position.
-  exit 1
-fi
 
 suffix=
 case $bitfile in 
@@ -223,8 +127,12 @@ fi
 ################################################################################
 # Now we do platform-specific loading.  The "device" arg is unlikely to be used.
 ################################################################################
-echo Loading bitstream into device \"$device\" via jtag cable \"$cable\", serial number \"$serial\", at position \"$position\"...
-$jtagSupport load "$temp" "$cable" "$position" "$bitfile"
+#echo Loading bitstream into device \"$device\" via jtag cable \"$cable\", serial number \"$serial\", at position \"$position\"...
+#$jtagSupport load "$temp" "$cable" "$position" "$bitfile"
+echo Loading bitstream 
+
+/home/user/sidekiq_sdk_v4.4.0/test_apps/bin/store_user_fpga -c 0 -s "$bitfile" --reload -v
+
 Err=$?
 rm -f $temp.$suffix
 if test $Err != 0; then

@@ -62,8 +62,11 @@ entity sdp2axi is
     sdp_in_data  : in  dword_array_t(0 to sdp_width-1);
     sdp_out      : out m2s_t;
     sdp_out_data : out dword_array_t(0 to sdp_width-1);
-    axi_in       : in  s_axi_hp_out_t;
-    axi_out      : out s_axi_hp_in_t;
+    axi_glb_out  : out axi_global_out_t;
+    --axi_in       : in  axi64_s2m_t;
+    --axi_out      : out axi64_m2s_t;
+    axi_in       : in  axi32_s2m_t;
+    axi_out      : out axi32_m2s_t;
     axi_error    : out bool_t;
     dbg_state    : out ulonglong_t;
     dbg_state1   : out ulonglong_t;
@@ -233,61 +236,71 @@ begin
   end process;
 
   ----------------------------------------------
-  -- Interface outputs to the S_AXI_HP interface
+  -- Interface outputs to the slave AXI processor interface
   ----------------------------------------------
   -- axi_hp outputs
-  axi_out.ACLK                <= clk;
+  axi_glb_out.AXI_ACLK_OUT         <= clk;
   -- Write address channel
-  axi_out.AW.ID                <= (others => '0');  -- spec says same id means in-order
-  axi_out.AW.ADDR              <= std_logic_vector(axi_addr) & "000";
-  axi_out.AW.LEN               <= std_logic_vector(axi_len);
-  axi_out.AW.SIZE              <= "011";        -- we are always 64 bits wide
-  axi_out.AW.BURST             <= "01";         -- we are always doing incrementing bursts
-  axi_out.AW.LOCK              <= "00";         -- normal access, no locking or exclusion
-  axi_out.AW.CACHE             <= (others => '0');
-  axi_out.AW.PROT              <= (others => '0');
-  axi_out.AW.VALID             <= axi_requesting_addr and pkt_writing_p;
+  axi_out.aw.ID.node           <= (others => '0');  -- spec says same id means in-order
+  axi_out.aw.ID.xid            <= (others => '0');  -- spec says same id means in-order
+--  axi_out.aw.ADDR              <= std_logic_vector(axi_addr) & "000";
+  axi_out.aw.ADDR              <= std_logic_vector(axi_addr) & "00";  
+  axi_out.aw.LEN               <= std_logic_vector(axi_len);
+--  axi_out.aw.SIZE              <= "011";        -- we are always 64 bits wide
+  axi_out.aw.SIZE              <= "010";        -- we are always 32 bits wide  
+  axi_out.aw.BURST             <= "01";         -- we are always doing incrementing bursts
+  axi_out.aw.LOCK              <= "00";         -- normal access, no locking or exclusion
+  axi_out.aw.CACHE             <= (others => '0');
+  axi_out.aw.PROT              <= (others => '0');
+  axi_out.aw.VALID             <= axi_requesting_addr and pkt_writing_p;
 
   -- Write data channel
   -- wired directly to sdp2axi_wd
 
   -- Write response channel
-  axi_out.B.READY              <= '1';              -- we are always ready for responses
+  axi_out.b.READY              <= '1';              -- we are always ready for responses
 
   -- Read address channel
-  axi_out.AR.ID                <= std_logic_vector(sdp_in.sdp.header.node(2 downto 0)) &
-                                  std_logic_vector(sdp_in.sdp.header.xid);
-  axi_out.AR.ADDR              <= std_logic_vector(axi_addr) & "000";
-  axi_out.AR.LEN               <= std_logic_vector(axi_len);
-  axi_out.AR.SIZE              <= "011"; -- we are always 64 bits wide
-  axi_out.AR.BURST             <= "01";  -- we are always doing incrementing bursts
-  axi_out.AR.LOCK              <= "00";  -- normal access, no locking or exclusion
-  axi_out.AR.CACHE             <= (others => '0');
-  axi_out.AR.PROT              <= (others => '0');
-  axi_out.AR.VALID             <= axi_requesting_addr and not pkt_writing_p;
+  axi_out.ar.ID.node           <= std_logic_vector(sdp_in.sdp.header.node(2 downto 0));
+  axi_out.ar.ID.xid            <= std_logic_vector(sdp_in.sdp.header.xid);
+--  axi_out.ar.ADDR              <= std_logic_vector(axi_addr) & "000";
+  axi_out.ar.ADDR              <= std_logic_vector(axi_addr) & "00";  
+  axi_out.ar.LEN               <= std_logic_vector(axi_len);
+--  axi_out.ar.SIZE              <= "011"; -- we are always 64 bits wide
+  axi_out.ar.SIZE              <= "010"; -- we are always 32 bits wide  
+  axi_out.ar.BURST             <= "01";  -- we are always doing incrementing bursts
+  axi_out.ar.LOCK              <= "00";  -- normal access, no locking or exclusion
+  axi_out.ar.CACHE             <= (others => '0');
+  axi_out.ar.PROT              <= (others => '0');
+  axi_out.ar.VALID             <= axi_requesting_addr and not pkt_writing_p;
+  axi_out.ar.QOS               <= (others => '0');
 
+  -- Write address channel
+  axi_out.aw.QOS               <= (others => '0');
+  -- Read address channel
+  axi_out.ar.QOS               <= (others => '0');
+  
   -- These are not AMBA/AXI
-  axi_out.AR.QOS               <= (others => '0');
-  axi_out.AW.QOS               <= (others => '0');
-  axi_out.AR.ISSUECAP1_EN      <= '0';
-  axi_out.AW.ISSUECAP1_EN      <= '0';
+--   axi_out.ar.ISSUECAP1_EN      <= '0';
+--   axi_out.aw.ISSUECAP1_EN      <= '0';
 
   ----------------------------------------------
   -- debug output - very poor man's ILA
   ----------------------------------------------
-  dbg_state <= to_ulonglong(
-    std_logic_vector(axi_addr_r) & "000" &
-    slv(pkt_writing_p) & --31
-    slv(taking_data) & --30
-    slv(sdp_in.sdp.eop) & --29
-    slv(addressing_done) & --28
-    slv(axi_accepting_addr) & --27
-    slv(accepting_last) & --26
-    slv(sdp_in.sdp.valid) & --25
-    "00000000000" & -- 24 - 14
-    slv(to_unsigned(address_state_t'pos(addr_state_r),2)) & -- 13-12
-    std_logic_vector(pkt_naxf_left) -- 11 to 0
-    );
+--  dbg_state <= to_ulonglong(
+----    std_logic_vector(axi_addr_r) & "000" &
+--    std_logic_vector(axi_addr_r) & "00" &    
+--    slv(pkt_writing_p) & --31
+--    slv(taking_data) & --30
+--    slv(sdp_in.sdp.eop) & --29
+--    slv(addressing_done) & --28
+--    slv(axi_accepting_addr) & --27
+--    slv(accepting_last) & --26
+--    slv(sdp_in.sdp.valid) & --25
+--    "00000000000" & -- 24 - 14
+--    slv(to_unsigned(address_state_t'pos(addr_state_r),2)) & -- 13-12
+--    std_logic_vector(pkt_naxf_left) -- 11 to 0
+--    );
     
   ----------------------------------------------
   -- Instantiate the write data channel module

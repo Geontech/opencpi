@@ -35,10 +35,12 @@ entity sdp2axi_wd is
           sdp             : in  sdp_t;
           sdp_in_data     : in  dword_array_t(0 to sdp_width-1);
           sdp_p           : in  sdp_t;
-          axi_in          : in  s_axi_hp_out_w_t; -- write data channel in to here
-          axi_out         : out s_axi_hp_in_w_t;  -- write data channel out from here
-          taking_data     : out bool_t;           -- indicate data is being used.
-          writing_done    : out bool_t;           -- indicate all data taken.
+          --axi_in          : in  axi64_w_s2m_t;  -- write data channel in to here
+          --axi_out         : out axi64_w_m2s_t;  -- write data channel out from here
+          axi_in          : in  axi32_w_s2m_t;  -- write data channel in to here
+          axi_out         : out axi32_w_m2s_t;  -- write data channel out from here
+          taking_data     : out bool_t;       -- indicate data is being used.
+          writing_done    : out bool_t;       -- indicate all data taken.
           debug           : out ulonglong_t);
 end entity sdp2axi_wd;
 architecture rtl of sdp2axi_wd is
@@ -293,7 +295,8 @@ begin
   -- Interface outputs to the S_AXI_HP write data channel interface
   -----------------------------------------------------------------
   -- Write data channel
-  axi_out.ID                 <= (others => '0');  -- spec says same id means in-order
+  axi_out.ID.node  <= (others => '0');  -- spec says same id means in-order
+  axi_out.ID.xid   <= (others => '0');  -- spec says same id means in-order
   g3: for i in 0 to axi_width-1 generate -- for all but the last ones
     axi_out.DATA(i*32+31 downto i*32) <= axi_data(i); -- swap(axi_data(i));
 --      axi_data_r(i) when i < last_sxf_offset_in_axf else

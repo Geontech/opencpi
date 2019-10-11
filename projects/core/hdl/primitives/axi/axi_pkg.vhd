@@ -24,6 +24,7 @@
 library IEEE; use IEEE.std_logic_1164.all; use ieee.numeric_std.all;
 library ocpi; use ocpi.types.all;
 library platform; use platform.platform_pkg.all;
+
 package axi_pkg is
 
 constant C_AXI_ADDR_WIDTH      : natural := 32; -- pinned at 32 in the AXI spec.
@@ -189,6 +190,7 @@ constant C_S_AXI_HP_COUNT      : natural := 4;
 --  WRISSUECAP1_EN : std_logic; -- ditto
 --end record s_axi_hp_in_t;
 
+
 type s_axi_hp_in_aw_t is record
   ID           : std_logic_vector(C_S_AXI_HP_ID_WIDTH-1 downto 0);
   ADDR         : std_logic_vector(C_AXI_ADDR_WIDTH-1 downto 0);
@@ -273,6 +275,194 @@ type s_axi_hp_out_t is record
 end record s_axi_hp_out_t;
 type s_axi_hp_out_array_t is array (natural range <>) of s_axi_hp_out_t;
 
+
+-------------------------------------------------------------------------------
+-- AXI signals, Reference: AMBA AXI and ACE Protocol Specfication
+-------------------------------------------------------------------------------
+constant C_NO_OF_LANES   : natural := 1;
+constant C_AXI_ID_WIDTH  : natural := 6;
+constant C_AXI_D32_WIDTH : natural := 32;
+constant C_AXI_D64_WIDTH : natural := 64;
+-- constant C_AXI_ADDR_WIDTH : natural := 32;
+
+
+-- Global
+--type axi_global_t is record
+--  ACLK    : std_logic;
+--  ARESETN : std_logic;
+--end record;
+
+-- *****************************
+-- Global Signals
+type axi_global_in_t is record
+  REFCLK       : std_logic;
+  AXI_ARESETN  : std_logic;
+  AXI_ACLK     : std_logic;
+  AXI_CTL_ACLK : std_logic;
+end record axi_global_in_t;
+type axi_global_out_t is record
+  AXI_ACLK_OUT     : std_logic;
+  AXI_CTL_ACLK_OUT : std_logic;
+  MMCM_LOCK        : std_logic;
+  INTERRUPT_OUT    : std_logic;
+end record axi_global_out_t;
+-- MSI Signals
+type msi_in_t is record
+  INTX_MSI_Request : std_logic;
+  MSI_Vector_Num   : std_logic_vector(4 downto 0);
+end record msi_in_t;
+type msi_out_t is record
+  MSI_enable       : std_logic;
+  MSI_Vector_Width : std_logic_vector(2 downto 0);
+  INTX_MSI_Grant   : std_logic;
+end record msi_out_t;
+-- PCIe Interface
+type pcie_in_t is record
+  PCI_EXP_RXP : std_logic_vector(C_NO_OF_LANES-1 downto 0);
+  PCI_EXP_RXN : std_logic_vector(C_NO_OF_LANES-1 downto 0);
+end record pcie_in_t;
+type pcie_out_t is record
+  PCI_EXP_TXP : std_logic_vector(C_NO_OF_LANES-1 downto 0);
+  PCI_EXP_TXN : std_logic_vector(C_NO_OF_LANES-1 downto 0);
+end record pcie_out_t;
+
+
+-- AXI ID type, 
+type axi_id_t is record
+  node : std_logic_vector(2 downto 0);
+  xid  : std_logic_vector(2 downto 0);
+end record;
+
+-- Write address channel
+type axi_aw_m2s_t is record  -- from Master to Slave    
+--   ID      : std_logic_vector(C_AXI_ID_WIDTH-1 downto 0);
+  ID     : axi_id_t;
+  ADDR   : std_logic_vector(C_AXI_ADDR_WIDTH-1 downto 0);
+  LEN    : std_logic_vector(3 downto 0);
+  SIZE   : std_logic_vector(2 downto 0);
+  BURST  : std_logic_vector(1 downto 0);
+  LOCK   : std_logic_vector(1 downto 0);
+  CACHE  : std_logic_vector(3 downto 0);
+  PROT   : std_logic_vector(2 downto 0);
+  QOS    : std_logic_vector(3 downto 0); -- AXI4 only
+  REGION : std_logic_vector(3 downto 0); -- AXI4 only
+  USER   : std_logic_vector(4 downto 0); -- Optional
+  VALID  : std_logic;
+end record;
+type axi_aw_s2m_t is record  -- from Slave to Master
+  READY : std_logic;
+end record;
+
+-- Write data channel signals
+type axi32_w_m2s_t is record  -- from Master to Slave    
+--   ID     : std_logic_vector(C_AXI_ID_WIDTH-1 downto 0); -- AXI3 only
+  ID     : axi_id_t;
+  DATA   : std_logic_vector(C_AXI_D32_WIDTH-1 downto 0);
+  STRB   : std_logic_vector((C_AXI_D32_WIDTH/8)-1 downto 0);
+  LAST   : std_logic;
+  VALID  : std_logic;
+end record;
+type axi32_w_s2m_t is record  -- from Slave to Master
+  READY  : std_logic;
+end record;
+type axi64_w_m2s_t is record  -- from Master to Slave    
+--   ID     : std_logic_vector(C_AXI_ID_WIDTH-1 downto 0); -- AXI3 only
+  ID     : axi_id_t;
+  DATA   : std_logic_vector(C_AXI_D64_WIDTH-1 downto 0);
+  STRB   : std_logic_vector((C_AXI_D64_WIDTH/8)-1 downto 0);
+  LAST   : std_logic;
+  VALID  : std_logic;
+end record;
+type axi64_w_s2m_t is record  -- from Slave to Master
+  READY  : std_logic;
+end record;
+
+-- Write response channel signals
+type axi_b_m2s_t is record  -- from Master to Slave    
+  READY  : std_logic;
+end record;
+type axi_b_s2m_t is record  -- from Slave to Master
+--   ID     : std_logic_vector(C_AXI_ID_WIDTH-1 downto 0);
+  ID     : axi_id_t;
+  RESP   : std_logic_vector(1 downto 0);
+  VALID  : std_logic;
+end record;
+
+-- Read address channel signals
+type axi_ar_m2s_t is record  -- from Master to Slave    
+--   ID      : std_logic_vector(C_AXI_ID_WIDTH-1 downto 0);
+  ID     : axi_id_t;
+  ADDR   : std_logic_vector(C_AXI_ADDR_WIDTH-1 downto 0);
+  LEN    : std_logic_vector(3 downto 0);
+  SIZE   : std_logic_vector(2 downto 0);
+  BURST  : std_logic_vector(1 downto 0);
+  LOCK   : std_logic_vector(1 downto 0);
+  CACHE  : std_logic_vector(3 downto 0);
+  PROT   : std_logic_vector(2 downto 0);
+  QOS    : std_logic_vector(3 downto 0); -- AXI4 only
+  REGION : std_logic_vector(3 downto 0); -- AXI4 only
+  USER   : std_logic_vector(4 downto 0); -- Optional
+  VALID  : std_logic;
+end record;
+type axi_ar_s2m_t is record  -- from Slave to Master
+  READY : std_logic;
+end record;
+
+-- Read data channel signals
+type axi32_r_s2m_t is record  -- from Slave to Master
+--   ID     : std_logic_vector(C_AXI_ID_WIDTH-1 downto 0);
+  ID     : axi_id_t;
+  DATA   : std_logic_vector(C_AXI_D32_WIDTH-1 downto 0);
+  RESP   : std_logic_vector(1 downto 0);
+  LAST   : std_logic;
+  VALID  : std_logic;
+end record;
+type axi32_r_m2s_t is record  -- from Master to Slave    
+  READY  : std_logic;
+end record;
+type axi64_r_s2m_t is record  -- from Slave to Master
+--   ID     : std_logic_vector(C_AXI_ID_WIDTH-1 downto 0);
+  ID     : axi_id_t;
+  DATA   : std_logic_vector(C_AXI_D64_WIDTH-1 downto 0);
+  RESP   : std_logic_vector(1 downto 0);
+  LAST   : std_logic;
+  VALID  : std_logic;
+end record;
+type axi64_r_m2s_t is record  -- from Master to Slave    
+  READY  : std_logic;
+end record;
+
+-- Signals grouping by channel, source and data width3
+type axi32_m2s_t is record
+  aw : axi_aw_m2s_t;
+  w  : axi32_w_m2s_t;
+  b  : axi_b_m2s_t;
+  ar : axi_ar_m2s_t;
+  r  : axi32_r_m2s_t;
+end record;
+type axi32_s2m_t is record
+  aw : axi_aw_s2m_t;
+  w  : axi32_w_s2m_t;
+  b  : axi_b_s2m_t;
+  ar : axi_ar_s2m_t;
+  r  : axi32_r_s2m_t;
+end record;
+type axi64_m2s_t is record
+  aw : axi_aw_m2s_t;
+  w  : axi64_w_m2s_t;
+  b  : axi_b_m2s_t;
+  ar : axi_ar_m2s_t;
+  r  : axi64_r_m2s_t;
+end record;
+type axi64_s2m_t is record
+  aw : axi_aw_s2m_t;
+  w  : axi64_w_s2m_t;
+  b  : axi_b_s2m_t;
+  ar : axi_ar_s2m_t;
+  r  : axi64_r_s2m_t;
+end record;
+
+-------------------------------------------------------------------------------
 subtype  Resp_t IS std_logic_vector(1 downto 0);
 constant Resp_OKAY   : Resp_t := "00";
 constant Resp_EXOKAY : Resp_t := "01";
@@ -281,39 +471,43 @@ constant Resp_DECERR : Resp_t := "11";
 
 component axi2cp is
   port(
-    clk     : in std_logic;
-    reset   : in bool_t;
-    axi_in  : in  m_axi_gp_out_t;
-    axi_out : out m_axi_gp_in_t;
+    clk     : in  std_logic;
+    reset   : in  bool_t;
+    axi_glb_out : out axi_global_out_t;
+    axi_in  : in  axi32_m2s_t;
+    axi_out : out axi32_s2m_t;
     cp_in   : in  occp_out_t;
     cp_out  : out occp_in_t
     );
 end component axi2cp;
 
-component unoc2axi is
-  generic(
-    ocpi_debug : boolean
-    );
-  port(
-    clk       : in  std_logic;
-    reset     : in  bool_t;
-    unoc_in   : in  unoc_master_in_t;
-    unoc_out  : out unoc_master_out_t;
-    axi_in    : in  s_axi_hp_out_t;
-    axi_out   : out s_axi_hp_in_t;
-    axi_error : out bool_t;
-    dbg_state : out ulonglong_t;
-    dbg_state1 : out ulonglong_t;
-    dbg_state2 : out ulonglong_t
-    );
-end component unoc2axi;
+--component unoc2axi is
+--  generic(
+--    ocpi_debug : boolean
+--    );
+--  port(
+--    clk        : in  std_logic;
+--    reset      : in  bool_t;
+--    unoc_in    : in  unoc_master_in_t;
+--    unoc_out   : out unoc_master_out_t;
+--    axi_in     : in  s_axi_hp_out_t;
+--    axi_out    : out s_axi_hp_in_t;
+--    axi_error  : out bool_t;
+--    dbg_state  : out ulonglong_t;
+--    dbg_state1 : out ulonglong_t;
+--    dbg_state2 : out ulonglong_t
+--    );
+--end component unoc2axi;
 
 component axinull is
   port(
-    clk       : in  std_logic;
-    reset     : in  bool_t;
-    axi_in    : in  s_axi_hp_out_t;
-    axi_out   : out s_axi_hp_in_t
+    clk     : in  std_logic;
+    reset   : in  bool_t;
+    axi_glb_out : out axi_global_out_t;
+    --axi_in  : in  axi64_m2s_t;
+    --axi_out : out axi64_s2m_t
+    axi_in  : in  axi32_m2s_t;
+    axi_out : out axi32_s2m_t
     );
 end component axinull;
 
