@@ -46,8 +46,8 @@ entity unoc2axi is
     reset     : in bool_t;
     unoc_in   : in  unoc_master_in_t;
     unoc_out  : out unoc_master_out_t;
-    axi_in    : in  s_axi_hp_out_t;
-    axi_out   : out s_axi_hp_in_t;
+    axi_in    : in  s_axi_out_t;
+    axi_out   : out s_axi_in_t;
     axi_error : out bool_t;
     dbg_state : out ulonglong_t;
     dbg_state1: out ulonglong_t;

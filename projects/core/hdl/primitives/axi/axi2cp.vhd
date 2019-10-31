@@ -20,14 +20,14 @@
 -- The clock and reset are injected to be supplied to both sides
 library IEEE; use IEEE.std_logic_1164.all; use ieee.numeric_std.all;
 library platform; use platform.all;
-library ocpi; use ocpi.types.all;
+library ocpi; use ocpi.types.all, ocpi.util.all;
 library work; use work.axi_pkg.all;
 entity axi2cp is
   port(
     clk     : in std_logic;
     reset   : in bool_t;
-    axi_in  : in  m_axi_gp_out_t;
-    axi_out : out m_axi_gp_in_t;
+    axi_in  : in  m_axi_out_t;
+    axi_out : out m_axi_in_t;
     cp_in   : in  platform_pkg.occp_out_t;
     cp_out  : out platform_pkg.occp_in_t
     );
@@ -79,21 +79,21 @@ begin
       else
         case address_state is
           when a_idle_e =>
-            if axi_in.AWVALID = '1' and axi_in.WVALID = '1' then
-              if axi_in.AWLEN = "0001" then
+            if axi_in.AW.VALID = '1' and axi_in.W.VALID = '1' then
+              if axi_in.AW.LEN = slvn(1,axi_in.AW.LEN'length) then
                 address_state <= a_first_e;
                 addr2_r       <= '0';
               else
-                addr2_r       <= axi_in.AWADDR(2);
+                addr2_r       <= axi_in.AW.ADDR(2);
                 address_state <= a_last_e;
               end if;
-            elsif axi_in.ARVALID = '1' then
-              if axi_in.ARLEN = "0001" then
+            elsif axi_in.AR.VALID = '1' then
+              if axi_in.AR.LEN = slvn(1,axi_in.AR.LEN'length) then
                 addr2_r       <= '0';
                 address_state <= a_first_e;
                 read_state    <= r_first_wanted_e;
               else
-                addr2_r       <= axi_in.ARADDR(2);
+                addr2_r       <= axi_in.AR.ADDR(2);
                 address_state <= a_last_e;
                 read_state    <= r_last_wanted_e;
               end if;
@@ -113,8 +113,8 @@ begin
           when a_last_e =>
             -- last address is offered. When it is taken we must change state.
             if its(cp_in.take) then
-              if (read_state = r_idle_e and axi_in.BREADY = '1') or
-                  (read_state /= r_idle_e and axi_in.RREADY = '1' and
+              if (read_state = r_idle_e and axi_in.B.READY = '1') or
+                  (read_state /= r_idle_e and axi_in.R.READY = '1' and
                    (read_state = r_last_valid_e or
                     (read_state = r_last_wanted_e and cp_in.valid = '1'))) then
                 -- if a write, and write response channel is ready, we're done
@@ -125,8 +125,8 @@ begin
               end if;
             end if;
           when a_taken_e =>
-            if (read_state = r_idle_e and axi_in.BREADY = '1') or
-                (read_state /= r_idle_e and axi_in.RREADY = '1' and
+            if (read_state = r_idle_e and axi_in.B.READY = '1') or
+                (read_state /= r_idle_e and axi_in.R.READY = '1' and
                  (read_state = r_last_valid_e or
                   (read_state = r_last_wanted_e and cp_in.valid = '1'))) then
               -- if a write, and write response channel is ready, we're done
@@ -140,26 +140,26 @@ begin
             null;
           when r_first_wanted_e => -- implies 2 word burst
             if cp_in.valid = '1' then
-              if axi_in.RREADY = '1' then
+              if axi_in.R.READY = '1' then
                 read_state <= r_last_wanted_e;
               else
                 read_state <= r_first_valid_e; -- waiting for RREADY
               end if;
             end if;
           when r_first_valid_e =>
-            if axi_in.RREADY = '1' then
+            if axi_in.R.READY = '1' then
               read_state <= r_last_wanted_e;
             end if;
           when r_last_wanted_e =>
             if cp_in.valid = '1' then
-              if axi_in.RREADY = '1' then
+              if axi_in.R.READY = '1' then
                 read_state <= r_idle_e;
               else
                 read_state <= r_last_valid_e;
               end if;
             end if;
           when r_last_valid_e =>
-            if axi_in.RREADY = '1' then
+            if axi_in.R.READY = '1' then
               read_state <= r_idle_e;
             end if;
         end case;
@@ -183,22 +183,24 @@ begin
   axi_out.ACLK    <= clk;        -- we drive the control clock as the AXI GP CLK
   -- Write Address Channel: we accept addresses when we don't need them anymore
   --                        note we need the AWID for the all responses
-  axi_out.AWREADY <= write_done;
+  axi_out.AW.READY <= write_done;
   -- Write Data Channel: we accept the data whenever a write request is taken
-  axi_out.WREADY  <= to_bool(read_state = r_idle_e and cp_in.take = '1' and
+  axi_out.W.READY  <= to_bool(read_state = r_idle_e and cp_in.take = '1' and
                              (address_state = a_first_e or address_state = a_last_e));
   -- Write Response Channel: we offer the write response
-  axi_out.BID     <= axi_in.AWID; -- we only do one at a time so we loop back the ID
-  axi_out.BRESP   <= Resp_OKAY;
-  axi_out.BVALID  <= write_done;
+--  axi_out.B.ID     <= axi_in.AW.ID;???
+  axi_out.B.ID     <= x"0"; -- what should this really be assigned to?
+  axi_out.B.RESP   <= Resp_OKAY;
+  axi_out.B.VALID  <= write_done;
   -- Read Address Channel
-  axi_out.ARREADY <= read_done;
+  axi_out.AR.READY <= read_done;
   -- Read Data Channel
-  axi_out.RID     <= axi_in.ARID;
-  axi_out.RDATA   <= cp_in.data;
-  axi_out.RRESP   <= Resp_OKAY;
-  axi_out.RLAST   <= read_done;
-  axi_out.RVALID  <= RVALID;
+--  axi_out.R.ID     <= axi_in.AR.ID;????
+  axi_out.R.ID     <= x"0"; -- what should this really be assigned to?
+  axi_out.R.DATA   <= cp_in.data;
+  axi_out.R.RESP   <= Resp_OKAY;
+  axi_out.R.LAST   <= read_done;
+  axi_out.R.VALID  <= RVALID;
   ----------------------------------------------------------------------------
   -- CP Master output signals we drive
   cp_out.clk        <= clk;
@@ -208,16 +210,16 @@ begin
   cp_out.valid      <= to_bool(address_state = a_first_e or
                                (address_state = a_last_e and
                                 (read_state /= r_idle_e or
-                                 axi_in.WVALID = '1')));
+                                 axi_in.W.VALID = '1')));
   cp_out.is_read    <= to_bool(read_state /= r_idle_e);
-  address           <= axi_in.AWADDR(cp_out.address'left + 2 downto 2)
+  address           <= axi_in.AW.ADDR(cp_out.address'left + 2 downto 2)
                        when read_state = r_idle_e else
-                       axi_in.ARADDR(cp_out.address'left + 2 downto 2);
+                       axi_in.AR.ADDR(cp_out.address'left + 2 downto 2);
   cp_out.address(cp_out.address'left downto 1) <= address(address'left downto 1);
   cp_out.address(0) <= addr2_r;
-  cp_out.byte_en    <= axi_in.WSTRB when read_state = r_idle_e else
-                       read_byte_en(axi_in.ARADDR(1 downto 0),
-                                    axi_in.ARSIZE);
-  cp_out.data       <= axi_in.WDATA;
-  cp_out.take       <= RVALID and axi_in.RREADY;
+  cp_out.byte_en    <= axi_in.W.STRB when read_state = r_idle_e else
+                       read_byte_en(axi_in.AR.ADDR(1 downto 0),
+                                    axi_in.AR.SIZE);
+  cp_out.data       <= axi_in.W.DATA;
+  cp_out.take       <= RVALID and axi_in.R.READY;
 end rtl;

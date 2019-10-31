@@ -35,8 +35,8 @@ entity unoc2axi_wd is
     pkt_naxf         : in  unoc_ndw_t;        -- valid during startup/sof
     unoc_take        : in  bool_t;            -- unoc xfer is being taken now
     unoc_in          : in  unoc_master_in_t;
-    axi_in           : in  s_axi_hp_out_w_t; -- write data channel in to here
-    axi_out          : out s_axi_hp_in_w_t;  -- write data channel out from here
+    axi_in           : in  s_axi_out_w_t;    -- write data channel in to here
+    axi_out          : out s_axi_in_w_t;     -- write data channel out from here
     wr_uxf_accepted  : out bool_t;           -- indicate that all the unoc data is accepted
     debug            : out ulonglong_t
     );

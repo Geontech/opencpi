@@ -223,8 +223,12 @@ fi
 ################################################################################
 # Now we do platform-specific loading.  The "device" arg is unlikely to be used.
 ################################################################################
-echo Loading bitstream into device \"$device\" via jtag cable \"$cable\", serial number \"$serial\", at position \"$position\"...
-$jtagSupport load "$temp" "$cable" "$position" "$bitfile"
+#echo Loading bitstream into device \"$device\" via jtag cable \"$cable\", serial number \"$serial\", at position \"$position\"...
+#$jtagSupport load "$temp" "$cable" "$position" "$bitfile"
+echo Loading bitstream 
+
+/home/user/sidekiq_sdk_v4.4.0/test_apps/bin/store_user_fpga -c 0 -s "$bitfile" --reload -v
+
 Err=$?
 rm -f $temp.$suffix
 if test $Err != 0; then

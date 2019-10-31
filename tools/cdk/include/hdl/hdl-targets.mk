@@ -54,7 +54,7 @@ HdlTopTargets:=xilinx altera modelsim # icarus # verilator
 ###############################################################################
 # Xilinx targets
 ###############################################################################
-HdlTargets_xilinx:=isim virtex5 virtex6 spartan3adsp spartan6 zynq_ise zynq xsim
+HdlTargets_xilinx:=isim virtex5 virtex6 spartan3adsp spartan6 zynq_ise zynq xsim artix7
 
 HdlTargets_virtex5:=xc5vtx240t xc5vlx50t xc5vsx95t xc5vlx330t xc5vlx110t
 HdlTargets_virtex6:=xc6vlx240t
@@ -62,8 +62,11 @@ HdlTargets_virtex6:=xc6vlx240t
 HdlTargets_spartan6:=xc6slx45
 HdlTargets_spartan3adsp:=xc3sd3400a
 
+HdlTargets_artix7:=xc7a50t
+#HdlTargets_artix7:=xc7a100t
+
 # Zynq targets - supported by both ISE and Vivado
-HdlTargets_zynq:=xc7z007s xc7z012s xc7z014s xc7z010 xc7z015 xc7z020 xc7z030 xc7z035 xc7z045 xc7z100 xc7z035i
+HdlTargets_zynq:=xc7z007s xc7z012s xc7z014s xc7z010 xc7z015 xc7z020 xc7z030 xc7z035 xc7z045 xc7z100
 # If building for zynq and no target is specified, default to the xc7z020
 HdlDefaultTarget_zynq:=xc7z020
 # Parts for zynq in ISE are the same as Vivado but with _ise_alias appended for internal differentiation
@@ -113,6 +116,8 @@ HdlToolSet_virtex6:=xst
 HdlToolSet_spartan6:=xst
 HdlToolSet_zynq_ise:=xst
 HdlToolSet_zynq:=vivado
+HdlToolSet_artix7:=vivado
+#HdlToolSet_artix7:=xst
 HdlToolSet_verilator:=verilator
 HdlToolSet_icarus:=icarus
 HdlToolSet_stratix4:=quartus
@@ -266,8 +271,7 @@ $(call OcpiDbgVar,HdlAllPlatforms)
 $(call OcpiDbgVar,OCPI_HDL_PLATFORM_PATH)
 # The warning below would apply, e.g. if a new project has been registered.
 $(foreach d,$(subst :, ,$(OCPI_HDL_PLATFORM_PATH)),\
-  $(if $(wildcard $d),,$(if $(filter clean%,$(MAKECMDGOALS)),,\
-    $(warning "$d" does not exist, so no hardware platform(s) can be imported from it)))\
+  $(if $(wildcard $d),,$(warning "$d" does not exist, so no hardware platform(s) can be imported from it))\
   $(if $(filter platforms,$(notdir $d)),\
     $(call HdlDoPlatformsDir,$d),\
     $(call HdlDoPlatform,$d)))
@@ -304,6 +308,6 @@ $(info HdlTopTargets="$(HdlTopTargets)";\
        $(foreach p,$(HdlAllPlatforms),\
          HdlFamily_$(HdlPart_$p)=$(call HdlGetFamily,$(HdlPart_$p));)\
 	   $(foreach p,$(HdlAllPlatforms),\
-	     HdlPlatformDir_$(p)="$(realpath $(HdlPlatformDir_$(p)))";))
+  	     HdlPlatformDir_$(p)="$(realpath $(HdlPlatformDir_$(p)))";))
 endif
 endif
